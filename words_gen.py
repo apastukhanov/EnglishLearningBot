@@ -36,7 +36,7 @@ def gen_quiz():
     words_dict = gen_random_words(4)
     write_answer_key = list(words_dict.keys())[0]
     write_answer_value = words_dict[write_answer_key]
-    mess_string = "Choose the defintion for word: <b>'{}'?</b>\n\n".format(write_answer_key)
+    mess_string = "Выберите верное определение <b>'{}'</b>:\n\n".format(write_answer_key)
     quiz_list = [words_dict[k] for k in words_dict.keys()]
     random.shuffle(quiz_list)
     return mess_string, quiz_list, write_answer_value

@@ -68,6 +68,13 @@ async def start_quiz(message: types.Message):
 
     await send_quiz(message)
 
+@dp.message_handler()
+async def echo_reply(message: types.Message):
+    """Отправляем ответ на неизвестный запрос к бобту"""
+    await message.answer(
+        "Такая команда недоступна 🤨\n\n"
+        "Чтобы получить список команд нажмите /help",
+        parse_mode=types.ParseMode.HTML)
 
 @dp.message_handler()
 async def send_quiz(message: types.Message):
@@ -117,7 +124,7 @@ async def wrong_answer(callback_query: CallbackQuery):
         if quiz_controller_dict[callback_query.message.chat.id]["quiz_started"]:
             quiz_controller_dict[callback_query.message.chat.id]["attempt"]+=1
             await bot.send_message(callback_query.from_user.id, 
-                                'Ошибка &#129398!',
+                                'Мимо &#129398&#129398&#129398',
                                 parse_mode=types.ParseMode.HTML)
 
         if quiz_controller_dict[callback_query.message.chat.id]["attempt"] < 5:
