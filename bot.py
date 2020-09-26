@@ -25,8 +25,7 @@ async def send_welcome(message: types.Message):
         "Приcлать 5 рандомных слов: /words\n\n"
         "Начать квиз: /quiz\n\n"
         "Завершить квиз: /stop_quiz\n\n"
-        "Помощь по боту: /help\n\n"
-        "Запустить бота: /start",
+        "Помощь по боту: /help\n\n",
         parse_mode=types.ParseMode.HTML
         )
 
@@ -45,7 +44,7 @@ async def stop_quiz(message: types.Message):
         if quiz_controller_dict[message.chat.id]["quiz_started"]:
             quiz_controller_dict[message.chat.id]["quiz_started"]=False
             await message.answer("Окей, Quiz остановлен!")
-            await print_quiz_results(message)
+            await print_quiz_results(message, quiz_stoped_manually=True)
         else:
             await message.answer("Quiz уже давно не работает &#128579",parse_mode=types.ParseMode.HTML)
     except:
@@ -69,8 +68,8 @@ async def start_quiz(message: types.Message):
     await send_quiz(message)
 
 @dp.message_handler()
-async def echo_reply(message: types.Message):
-    """Отправляем ответ на неизвестный запрос к бобту"""
+async def reply_to_unknown_cmd(message: types.Message):
+    """Отправляем ответ на неизвестный запрос к боту"""
     await message.answer(
         "Такая команда недоступна 🤨\n\n"
         "Чтобы получить список команд нажмите /help",
@@ -97,55 +96,53 @@ async def send_quiz(message: types.Message):
         reply_markup=markup)
 
 
-@dp.callback_query_handler(lambda c: c.data == 'верно')
-async def right_answer(callback_query: CallbackQuery):
+@dp.callback_query_handler(lambda c: c.data == 'верно' or c.data == 'не верно')
+async def response_quiz_answer(callback_query: CallbackQuery):
     """Поздравляем с правильным ответом на вопрос из quiz"""
     try:
         if quiz_controller_dict[callback_query.message.chat.id]["quiz_started"]:
             quiz_controller_dict[callback_query.message.chat.id]["attempt"]+=1
-            quiz_controller_dict[callback_query.message.chat.id]["right_ans"]+=1
-            
-            await bot.send_message(callback_query.from_user.id, 
-                                        'Правильно &#127881;&#127881;&#127881;',
-                                        parse_mode=types.ParseMode.HTML)
 
-        if quiz_controller_dict[callback_query.message.chat.id]["attempt"] < 5:
-            await send_quiz(callback_query.message)
-        else:
-            await print_quiz_results(callback_query.message)
-    except KeyError:
-        await start_quiz(callback_query.message)
+            if callback_query.data == 'верно':
+                quiz_controller_dict[callback_query.message.chat.id]["right_ans"]+=1
+                await bot.send_message(callback_query.from_user.id, 
+                                            'Правильно &#127881;&#127881;&#127881;',
+                                            parse_mode=types.ParseMode.HTML)
 
-    
-@dp.callback_query_handler(lambda c: c.data == 'не верно')
-async def wrong_answer(callback_query: CallbackQuery):
-    """Уведомляем об ошибке, если ответ на вопрос из quiz неверный"""
-    try:
-        if quiz_controller_dict[callback_query.message.chat.id]["quiz_started"]:
-            quiz_controller_dict[callback_query.message.chat.id]["attempt"]+=1
-            await bot.send_message(callback_query.from_user.id, 
+            elif callback_query.data == 'не верно':
+                await bot.send_message(callback_query.from_user.id, 
                                 'Мимо &#129398&#129398&#129398',
                                 parse_mode=types.ParseMode.HTML)
 
-        if quiz_controller_dict[callback_query.message.chat.id]["attempt"] < 5:
-            await send_quiz(callback_query.message)
+            if quiz_controller_dict[callback_query.message.chat.id]["attempt"] < 5:
+                await send_quiz(callback_query.message)
+            else:
+                await print_quiz_results(callback_query.message)
         else:
-            await print_quiz_results(callback_query.message)
+            await process_not_started_quiz(callback_query.message)
     except KeyError:
         await start_quiz(callback_query.message)
 
 
 @dp.callback_query_handler()
-async def print_quiz_results(message: types.Message):
+async def process_not_started_quiz(message: types.Message):
+    await message.answer(
+                            "<b>Quiz всегда можно пройти еще раз\n"
+                            "просто нажми на /quiz</b>",
+                                parse_mode=types.ParseMode.HTML)
+
+@dp.callback_query_handler()
+async def print_quiz_results(message: types.Message,  quiz_stoped_manually: bool = False):
     try:
         quiz_controller_dict[message.chat.id]["quiz_started"]=False
+        first_sentence = "" if quiz_stoped_manually else "Окей... на сегодня достаточно &#129299"
         await message.answer(
-                            "Окей... на сегодня достаточно &#129299\n\n"
+                            "\n\n".join([first_sentence,
                             "Правильных ответов: <b>{}</b> из <b>{}</b>!\n\n"
-                            "<b>Quiz всегда можно пройти заново\n"
+                            "<b>Quiz всегда можно пройти еще раз\n"
                             "просто нажми на /quiz</b>".format(
                                 quiz_controller_dict[message.chat.id]["right_ans"],
-                                quiz_controller_dict[message.chat.id]["attempt"]),
+                                quiz_controller_dict[message.chat.id]["attempt"])]),
                                 parse_mode=types.ParseMode.HTML)
     except KeyError:
         await message.answer("Упс.. Ваш quiz куда пропал...&#129325")
